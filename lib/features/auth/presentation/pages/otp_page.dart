@@ -9,7 +9,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_button.dart';
-import '../../../../core/widgets/responsive_wrapper.dart';
 import '../../../../core/utils/responsive_utils.dart';
 
 class OtpPage extends StatefulWidget {
@@ -56,7 +55,6 @@ class _OtpPageState extends State<OtpPage> {
       _pinController.clear();
     });
     _startTimer();
-    // TODO: Implement resend OTP API call
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -134,15 +132,35 @@ class _OtpPageState extends State<OtpPage> {
     return Scaffold(
       backgroundColor: AppColors.lightGrey,
       appBar: const CustomAppBar(title: 'تأكيد الكود'),
-      body: ResponsiveWrapper(
-        child: SafeArea(
+      body: SafeArea(
+        child: Center(
           child: SingleChildScrollView(
-            child: Padding(
-              padding: ResponsiveUtils.allPadding(mobile: 24),
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: context.isDesktop ? 500.w : double.infinity,
+              ),
+              margin: EdgeInsets.symmetric(
+                horizontal: context.isDesktop ? 0 : 24.w,
+              ),
+              padding: EdgeInsets.all(context.isDesktop ? 48.r : 24.r),
+              decoration: context.isDesktop
+                  ? BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(16.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.darkGrey.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    )
+                  : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Gap(40.h),
+                  Gap(context.isDesktop ? 20.h : 40.h),
                   _buildHeader(),
                   Gap(50.h),
                   _buildPinInput(
@@ -157,6 +175,7 @@ class _OtpPageState extends State<OtpPage> {
                   _buildVerifyButton(),
                   Gap(20.h),
                   _buildBackButton(),
+                  Gap(context.isDesktop ? 20.h : 0),
                 ],
               ),
             ),
@@ -245,7 +264,6 @@ class _OtpPageState extends State<OtpPage> {
           ),
           onCompleted: (pin) => _handleVerify(),
           validator: (value) {
-            // Simulate validation - in real app, this would be done server-side
             if (value == null || value.length < 6) {
               return 'الرجاء إدخال الرمز كاملاً';
             }

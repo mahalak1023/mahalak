@@ -8,7 +8,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/custom_text_field.dart';
-import '../../../../core/widgets/responsive_wrapper.dart';
 import '../../../../core/utils/responsive_utils.dart';
 
 class AuthEntryPage extends StatefulWidget {
@@ -56,88 +55,44 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.lightGrey,
-      body: ResponsiveWrapper(
-        applyPadding: false,
-        child: SafeArea(
-          child: ResponsiveLayout(
-            mobile: _buildMobileLayout(),
-            tablet: _buildTabletLayout(),
-            desktop: _buildDesktopLayout(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMobileLayout() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: ResponsiveUtils.allPadding(mobile: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Gap(40.h),
-            _buildHeader(),
-            Gap(60.h),
-            _buildForm(),
-            Gap(24.h),
-            _buildFooter(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabletLayout() {
-    return Center(
-      child: Container(
-        constraints: BoxConstraints(maxWidth: 500.w),
-        padding: ResponsiveUtils.allPadding(mobile: 32),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Gap(60.h),
-              _buildHeader(),
-              Gap(80.h),
-              _buildForm(),
-              Gap(32.h),
-              _buildFooter(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDesktopLayout() {
-    return Center(
-      child: Container(
-        constraints: BoxConstraints(maxWidth: 600.w),
-        padding: ResponsiveUtils.allPadding(mobile: 48),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16.r),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.darkGrey.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: context.isDesktop ? 500.w : double.infinity,
+              ),
+              margin: EdgeInsets.symmetric(
+                horizontal: context.isDesktop ? 0 : 24.w,
+              ),
+              padding: EdgeInsets.all(context.isDesktop ? 48.r : 24.r),
+              decoration: context.isDesktop
+                  ? BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(16.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.darkGrey.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    )
+                  : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Gap(context.isDesktop ? 20.h : 40.h),
+                  _buildHeader(),
+                  Gap(60.h),
+                  _buildForm(),
+                  Gap(24.h),
+                  _buildFooter(),
+                  Gap(context.isDesktop ? 20.h : 0),
+                ],
+              ),
             ),
-          ],
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Gap(40.h),
-              _buildHeader(),
-              Gap(60.h),
-              _buildForm(),
-              Gap(32.h),
-              _buildFooter(),
-              Gap(40.h),
-            ],
           ),
         ),
       ),
@@ -236,7 +191,9 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
       children: [
         Row(
           children: [
-            Expanded(child: Divider(color: AppColors.darkGrey.withValues(alpha: 0.2))),
+            Expanded(
+                child: Divider(
+                    color: AppColors.darkGrey.withValues(alpha: 0.2))),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Text(
@@ -244,7 +201,9 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
                 style: AppTextStyles.caption,
               ),
             ),
-            Expanded(child: Divider(color: AppColors.darkGrey.withValues(alpha: 0.2))),
+            Expanded(
+                child: Divider(
+                    color: AppColors.darkGrey.withValues(alpha: 0.2))),
           ],
         ).animate().fadeIn(delay: 1000.ms),
         Gap(20.h),
