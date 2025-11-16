@@ -1,8 +1,15 @@
 
 import 'package:flutter/material.dart';
 
-class AddressPickerPage extends StatelessWidget {
+class AddressPickerPage extends StatefulWidget {
   const AddressPickerPage({super.key});
+
+  @override
+  State<AddressPickerPage> createState() => _AddressPickerPageState();
+}
+
+class _AddressPickerPageState extends State<AddressPickerPage> {
+  int _selectedAddress = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +31,13 @@ class AddressPickerPage extends StatelessWidget {
                       child: ListTile(
                         title: Text('عنوان ${index + 1}'),
                         subtitle: const Text('تفاصيل العنوان هنا...'),
-                        leading: Radio(value: index, groupValue: 0, onChanged: (value) {}),
-                        onTap: () => Navigator.pushNamed(context, '/checkout'),
+                        selected: _selectedAddress == index,
+                        onTap: () {
+                          setState(() {
+                            _selectedAddress = index;
+                          });
+                          Navigator.pushNamed(context, '/checkout');
+                        },
                       ),
                     );
                   },

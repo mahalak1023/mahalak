@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:myapp/core/services/firestore_service.dart';
+import 'firebase_options.dart';
 
 // Theme
 import 'core/theme/app_theme.dart';
@@ -35,7 +39,12 @@ import 'features/orders/presentation/pages/order_details_page.dart';
 // Support
 import 'features/support/presentation/pages/help_center_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  await FirestoreService().addSampleData(); // Add sample data
   runApp(const MahallakApp());
 }
 
@@ -66,11 +75,21 @@ class MahallakApp extends StatelessWidget {
           },
 
           // أول شاشة
-          initialRoute: '/',
+          home: StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasData) {
+                return const HomePage();
+              }
+              return const AuthEntryPage();
+            },
+          ),
 
           routes: {
             // Auth
-            '/': (context) => const AuthEntryPage(),
             '/otp': (context) => const OtpPage(),
             '/forgot-password': (context) => const ForgotPasswordPage(),
 

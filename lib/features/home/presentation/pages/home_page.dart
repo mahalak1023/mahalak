@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:myapp/core/widgets/app_app_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:myapp/core/services/firestore_service.dart';
 import 'package:myapp/core/widgets/app_bottom_nav_bar.dart';
 import 'package:myapp/core/widgets/app_section_title.dart';
 import 'package:myapp/core/widgets/app_text_field.dart';
-import 'package:myapp/features/home/presentation/widgets/product_card.dart';
+import 'package:myapp/features/home/data/models/store_model.dart';
 import 'package:myapp/features/home/presentation/widgets/store_card.dart';
+import 'package:myapp/features/product/data/models/product_model.dart';
+import 'package:myapp/features/home/presentation/widgets/product_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,58 +18,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Mock data for demonstration
-  final List<Map<String, dynamic>> stores = [
-    {
-      "name": "سوبر ماركت الأمانة",
-      "category": "بقالة عامة",
-      "delivery": "30-45 دقيقة",
-      "rating": 4.5,
-    },
-    {
-      "name": "مخبز وحلويات النجاح",
-      "category": "مخبوزات",
-      "delivery": "20-30 دقيقة",
-      "rating": 4.8,
-    },
-    {
-      "name": "ملحمة أبو أحمد",
-      "category": "لحوم ودواجن",
-      "delivery": "45-60 دقيقة",
-      "rating": 4.2,
-    },
-  ];
-
-  final List<Map<String, dynamic>> products = [
-    {
-      "name": "جبنة بيضاء بلدي - 1 كغ",
-      "store": "سوبر ماركت الأمانة",
-      "price": 75.0,
-      "oldPrice": 90.0,
-      "imageUrl": "https://picsum.photos/seed/cheese/400/400",
-    },
-    {
-      "name": "خبز أسمر طازج - كيس",
-      "store": "مخبز وحلويات النجاح",
-      "price": 5.0,
-      "oldPrice": null,
-      "imageUrl": "https://picsum.photos/seed/bread/400/400",
-    },
-    {
-      "name": "دجاج كامل طازج - 900غ",
-      "store": "ملحمة أبو أحمد",
-      "price": 28.0,
-      "oldPrice": 32.0,
-      "imageUrl": "https://picsum.photos/seed/chicken/400/400",
-    },
-    {
-      "name": "زيت زيتون بكر - 500مل",
-      "store": "سوبر ماركت الأمانة",
-      "price": 45.0,
-      "oldPrice": null,
-      "imageUrl": "https://picsum.photos/seed/olive/400/400",
-    },
-  ];
+  final FirestoreService _firestoreService = FirestoreService();
+  late Future<List<StoreModel>> _storesFuture;
+  late Future<List<ProductModel>> _productsFuture;
 
   final List<String> categories = [
     "الكل",
@@ -80,9 +34,28 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0; // For bottom nav bar
 
   @override
+  void initState() {
+    super.initState();
+    _storesFuture = _firestoreService.getStores();
+    _productsFuture = _firestoreService.getProducts();
+  }
+
+  Future<void> _signOut() async {
+    await FirebaseAuth.instance.signOut();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AppAppBar(title: "محلك", showBack: false),
+      appBar: AppBar(
+        title: const Text('محلك'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _signOut,
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
@@ -248,52 +221,76 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildNearbyStoresList() {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 8), // Adjust padding for cards
-      itemCount: stores.length,
-      itemBuilder: (context, index) {
-        final store = stores[index];
-        return StoreCard(
-          storeName: store['name']!,
-          category: store['category']!,
-          deliveryTimeText: store['delivery']!,
-          rating: store['rating']!,
-          onTap: () => Navigator.pushNamed(context, '/products'),
+    return FutureBuilder<List<StoreModel>>(
+      future: _storesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        final stores = snapshot.data ?? [];
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 8), // Adjust padding for cards
+          itemCount: stores.length,
+          itemBuilder: (context, index) {
+            final store = stores[index];
+            return StoreCard(
+              storeName: store.name,
+              category: store.category,
+              deliveryTimeText: store.deliveryTime,
+              rating: store.rating,
+              onTap: () => Navigator.pushNamed(context, '/products'),
+            );
+          },
         );
       },
     );
   }
 
   Widget _buildPopularProductsList() {
-    return SizedBox(
-      height: 280, // Adjust height based on ProductCard size
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          final product = products[index];
-          return SizedBox(
-            width: 180, // Set a fixed width for horizontal cards
-            child: ProductCard(
-              productName: product['name']!,
-              storeName: product['store']!,
-              price: product['price']!,
-              oldPrice: product['oldPrice']!,
-              imageUrl: product['imageUrl']!,
-              onTap: () => Navigator.pushNamed(context, '/product-details'),
-              onAddToCart: () {
-                // TODO: Add to cart logic
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('تمت الإضافة إلى السلة')),
-                );
-              },
-            ),
-          );
-        },
-      ),
+    return FutureBuilder<List<ProductModel>>(
+      future: _productsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        final products = snapshot.data ?? [];
+        return SizedBox(
+          height: 280, // Adjust height based on ProductCard size
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+              return SizedBox(
+                width: 180, // Set a fixed width for horizontal cards
+                child: ProductCard(
+                  productName: product.name,
+                  storeName: product.store,
+                  price: product.price,
+                  oldPrice: product.oldPrice,
+                  imageUrl: product.imageUrl,
+                  onTap: () => Navigator.pushNamed(context, '/product-details'),
+                  onAddToCart: () {
+                    // TODO: Add to cart logic
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تمت الإضافة إلى السلة')),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

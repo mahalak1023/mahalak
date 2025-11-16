@@ -3,25 +3,36 @@ import 'package:myapp/core/widgets/app_app_bar.dart';
 import 'package:myapp/core/widgets/app_empty_state.dart';
 import 'package:myapp/core/widgets/app_primary_button.dart';
 
-class CartPage extends StatelessWidget {
+class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    const bool isCartEmpty = false; // Set to true to see the empty state
+  State<CartPage> createState() => _CartPageState();
+}
 
+class _CartPageState extends State<CartPage> {
+  bool _isCartEmpty = false;
+
+  @override
+  Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: const AppAppBar(title: 'السلة'),
-        body: isCartEmpty
-            ? const AppEmptyState(
+        body: _isCartEmpty
+            ? AppEmptyState(
                 title: 'سلتك فارغة!',
                 description: 'أضف بعض المنتجات إلى سلتك لبدء التسوق.',
                 lottieAssetPath: 'assets/lottie/empty-cart.json',
+                onButtonPressed: () {
+                  setState(() {
+                    _isCartEmpty = false;
+                  });
+                },
+                buttonText: 'ابدأ التسوق',
               )
             : const CartView(),
-        bottomNavigationBar: isCartEmpty
+        bottomNavigationBar: _isCartEmpty
             ? null
             : Padding(
                 padding: const EdgeInsets.all(16.0),

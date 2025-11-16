@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_text_styles.dart';
 
@@ -10,8 +9,8 @@ class AppTheme {
 
   /// Light theme configuration
   static ThemeData get lightTheme {
-    // Get Cairo text theme as base
-    final textTheme = GoogleFonts.cairoTextTheme();
+    // Base text theme
+    const textTheme = TextTheme();
 
     return ThemeData(
       // Color scheme
@@ -57,9 +56,10 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryBlue,
-          textStyle: GoogleFonts.cairo(
+          textStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
+            fontFamily: 'Arial',
           ),
         ),
       ),
@@ -72,9 +72,10 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: GoogleFonts.cairo(
+          textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
+            fontFamily: 'Arial',
           ),
           padding: const EdgeInsets.symmetric(
             horizontal: 24,
@@ -128,9 +129,10 @@ class AppTheme {
         ),
         labelStyle: AppTextStyles.secondary,
         hintStyle: AppTextStyles.caption,
-        errorStyle: GoogleFonts.cairo(
+        errorStyle: const TextStyle(
           fontSize: 12,
           color: AppColors.errorRed,
+          fontFamily: 'Arial',
         ),
       ),
 
@@ -146,39 +148,45 @@ class AppTheme {
       // Text Theme - Map to our custom styles
       textTheme: textTheme.copyWith(
         headlineLarge: AppTextStyles.headlineLarge,
-        headlineMedium: GoogleFonts.cairo(
+        headlineMedium: const TextStyle(
           fontSize: 28,
           fontWeight: FontWeight.bold,
           color: AppColors.darkGrey,
+          fontFamily: 'Arial',
         ),
-        headlineSmall: GoogleFonts.cairo(
+        headlineSmall: const TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w600,
           color: AppColors.darkGrey,
+          fontFamily: 'Arial',
         ),
         titleLarge: AppTextStyles.sectionTitle,
-        titleMedium: GoogleFonts.cairo(
+        titleMedium: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.darkGrey,
+          fontFamily: 'Arial',
         ),
-        titleSmall: GoogleFonts.cairo(
+        titleSmall: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
           color: AppColors.darkGrey,
+          fontFamily: 'Arial',
         ),
         bodyLarge: AppTextStyles.body,
-        bodyMedium: GoogleFonts.cairo(
+        bodyMedium: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.normal,
           color: AppColors.darkGrey,
+          fontFamily: 'Arial',
         ),
         bodySmall: AppTextStyles.secondary,
         labelLarge: AppTextStyles.button,
-        labelMedium: GoogleFonts.cairo(
+        labelMedium: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: AppColors.darkGrey,
+          fontFamily: 'Arial',
         ),
         labelSmall: AppTextStyles.caption,
       ),
@@ -200,13 +208,15 @@ class AppTheme {
         backgroundColor: AppColors.white,
         selectedItemColor: AppColors.primaryBlue,
         unselectedItemColor: AppColors.darkGrey.withValues(alpha: 0.6),
-        selectedLabelStyle: GoogleFonts.cairo(
+        selectedLabelStyle: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
+          fontFamily: 'Arial',
         ),
-        unselectedLabelStyle: GoogleFonts.cairo(
+        unselectedLabelStyle: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.normal,
+          fontFamily: 'Arial',
         ),
         type: BottomNavigationBarType.fixed,
       ),
@@ -222,13 +232,15 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.lightGrey,
         selectedColor: AppColors.accentTeal,
-        labelStyle: GoogleFonts.cairo(
+        labelStyle: const TextStyle(
           fontSize: 14,
           color: AppColors.darkGrey,
+          fontFamily: 'Arial',
         ),
-        secondaryLabelStyle: GoogleFonts.cairo(
+        secondaryLabelStyle: const TextStyle(
           fontSize: 14,
           color: AppColors.white,
+          fontFamily: 'Arial',
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
