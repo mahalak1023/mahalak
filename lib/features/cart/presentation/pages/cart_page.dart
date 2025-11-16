@@ -1,56 +1,90 @@
-
 import 'package:flutter/material.dart';
+import 'package:myapp/core/widgets/app_app_bar.dart';
+import 'package:myapp/core/widgets/app_empty_state.dart';
+import 'package:myapp/core/widgets/app_primary_button.dart';
 
 class CartPage extends StatelessWidget {
   const CartPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    const bool isCartEmpty = false; // Set to true to see the empty state
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('السلة'),
-        ),
-        body: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                itemCount: 3,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    leading: const Icon(Icons.shopping_bag),
-                    title: Text('منتج ${index + 1}'),
-                    subtitle: const Text('2 x 50 ر.س'),
-                    trailing: const Text('100 ر.س'),
-                  );
-                },
+        appBar: const AppAppBar(title: 'السلة'),
+        body: isCartEmpty
+            ? const AppEmptyState(
+                title: 'سلتك فارغة!',
+                description: 'أضف بعض المنتجات إلى سلتك لبدء التسوق.',
+                lottieAssetPath: 'assets/lottie/empty-cart.json',
+              )
+            : const CartView(),
+        bottomNavigationBar: isCartEmpty
+            ? null
+            : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: AppPrimaryButton(
+                  text: 'الانتقال إلى الدفع',
+                  onPressed: () {
+                    // TODO: Navigate to checkout page
+                  },
+                ),
               ),
+      ),
+    );
+  }
+}
+
+class CartView extends StatelessWidget {
+  const CartView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: 3, // Example item count
+      itemBuilder: (context, index) => const CartItemCard(),
+    );
+  }
+}
+
+class CartItemCard extends StatelessWidget {
+  const CartItemCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
+            Image.network(
+              'https://picsum.photos/100/100?random=$hashCode',
+              width: 80,
+              height: 80,
+              fit: BoxFit.cover,
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+            const SizedBox(width: 16),
+            Expanded(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('الإجمالي', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text('300 ر.س', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/address-picker');
-                      },
-                      child: const Text('المتابعة للدفع'),
-                    ),
-                  ),
+                  const Text('اسم المنتج', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('50.00 ر.س', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                 ],
               ),
             ),
+            Row(
+              children: [
+                IconButton(icon: const Icon(Icons.remove), onPressed: () {}),
+                const Text('1', style: TextStyle(fontSize: 16)),
+                IconButton(icon: const Icon(Icons.add), onPressed: () {}),
+              ],
+            ),
+            IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () {}),
           ],
         ),
       ),

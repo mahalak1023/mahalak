@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 // Theme
 import 'core/theme/app_theme.dart';
@@ -43,55 +44,63 @@ class MahallakApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'محلك',
-      debugShowCheckedModeBanner: false,
-
-      // نظام التصميم الرسمي
-      theme: AppTheme.lightTheme,
-
-      // اتجاه RTL للتطبيق كله
+    // Initialize ScreenUtil for responsive design
+    return ScreenUtilInit(
+      designSize: const Size(375, 812), // iPhone 11 Pro size as reference
+      minTextAdapt: true,
+      splitScreenMode: true,
       builder: (context, child) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: child ?? const SizedBox.shrink(),
+        return MaterialApp(
+          title: 'محلك',
+          debugShowCheckedModeBanner: false,
+
+          // نظام التصميم الرسمي
+          theme: AppTheme.lightTheme,
+
+          // اتجاه RTL للتطبيق كله
+          builder: (context, widget) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: widget ?? const SizedBox.shrink(),
+            );
+          },
+
+          // أول شاشة
+          initialRoute: '/',
+
+          routes: {
+            // Auth
+            '/': (context) => const AuthEntryPage(),
+            '/otp': (context) => const OtpPage(),
+            '/forgot-password': (context) => const ForgotPasswordPage(),
+
+            // Home & Stores
+            '/home': (context) => const HomePage(),
+            '/stores': (context) => const StoreListPage(),
+            '/products': (context) => const ProductListPage(),
+
+            // Product
+            '/product-details': (context) => const ProductDetailsPage(),
+
+            // Cart
+            '/cart': (context) => const CartPage(),
+
+            // Address
+            '/address-picker': (context) => const AddressPickerPage(),
+            '/add-address': (context) => const AddAddressPage(),
+
+            // Checkout + order status
+            '/checkout': (context) => const CheckoutPage(),
+            '/order-status': (context) => const OrderStatusPage(),
+
+            // Orders
+            '/orders': (context) => const OrdersHistoryPage(),
+            '/order-details': (context) => const OrderDetailsPage(),
+
+            // Support
+            '/help-center': (context) => const HelpCenterPage(),
+          },
         );
-      },
-
-      // أول شاشة
-      initialRoute: '/',
-
-      routes: {
-        // Auth
-        '/': (context) => const AuthEntryPage(),
-        '/otp': (context) => const OtpPage(),
-        '/forgot-password': (context) => const ForgotPasswordPage(),
-
-        // Home & Stores
-        '/home': (context) => const HomePage(),
-        '/stores': (context) => const StoreListPage(),
-        '/products': (context) => const ProductListPage(),
-
-        // Product
-        '/product-details': (context) => const ProductDetailsPage(),
-
-        // Cart
-        '/cart': (context) => const CartPage(),
-
-        // Address
-        '/address-picker': (context) => const AddressPickerPage(),
-        '/add-address': (context) => const AddAddressPage(),
-
-        // Checkout + order status
-        '/checkout': (context) => const CheckoutPage(),
-        '/order-status': (context) => const OrderStatusPage(),
-
-        // Orders
-        '/orders': (context) => const OrdersHistoryPage(),
-        '/order-details': (context) => const OrderDetailsPage(),
-
-        // Support
-        '/help-center': (context) => const HelpCenterPage(),
       },
     );
   }
