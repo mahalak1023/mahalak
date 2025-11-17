@@ -25,8 +25,9 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
   final _formKey = GlobalKey<FormState>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final AuthService _authService = AuthService();
-  bool _isLoading = false;
-  String? _verificationId;
+  bool _isLoading = false; // For phone auth
+  bool _isGoogleLoading = false; // For Google Sign-In
+  String? _verificationId; // Used in phone verification callback
   ConfirmationResult? _confirmationResult; // For web platform
 
   @override
@@ -122,7 +123,6 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
               if (mounted) {
                 setState(() {
                   _isLoading = false;
-                  _verificationId = verificationId;
                 });
 
                 // Navigate to OTP page with verification ID and phone number
@@ -158,31 +158,45 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
   }
 
   void _handleGoogleSignIn() async {
-    setState(() => _isLoading = true);
+    setState(() => _isGoogleLoading = true);
 
     try {
       final userCredential = await _authService.signInWithGoogle();
 
-      if (userCredential != null && mounted) {
-        setState(() => _isLoading = false);
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-      } else {
-        // User canceled sign-in
+      if (userCredential != null) {
+        // Success: Navigate to home
         if (mounted) {
-          setState(() => _isLoading = false);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/home',
+            (route) => false,
+          );
+        }
+      } else {
+        // User canceled or double-tap ignored
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم إلغاء تسجيل الدخول بواسطة جوجل.'),
+              backgroundColor: AppColors.darkGrey,
+            ),
+          );
         }
       }
     } catch (e) {
+      // Handle exceptions from the service
+      debugPrint('Google Sign-In Error: ${e.toString()}');
       if (mounted) {
-        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'حدث خطأ في تسجيل الدخول بواسطة Google: ${e.toString()}',
-            ),
+          const SnackBar(
+            content: Text('فشل تسجيل الدخول. برجاء المحاولة مرة أخرى.'),
             backgroundColor: AppColors.errorRed,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
       }
     }
   }
@@ -519,7 +533,8 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
         _buildSocialButton(
           icon: Icons.g_mobiledata,
           text: 'تسجيل الدخول بواسطة Google',
-          onTap: _handleGoogleSignIn,
+          onTap: _isGoogleLoading ? null : _handleGoogleSignIn,
+          isLoading: _isGoogleLoading,
         ).animate().fadeIn(delay: 1200.ms).slideX(begin: 0.1, end: 0),
         Gap(32.h),
         Text(
@@ -536,10 +551,11 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
   Widget _buildSocialButton({
     required IconData icon,
     required String text,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
+    bool isLoading = false,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
@@ -553,17 +569,28 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 24.sp, color: AppColors.darkGrey),
-            Gap(12.w),
-            Text(
-              text,
-              style: AppTextStyles.body.copyWith(
-                fontSize: ResponsiveUtils.fontSize(14),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+          children: isLoading
+              ? [
+                  SizedBox(
+                    width: 24.sp,
+                    height: 24.sp,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                ]
+              : [
+                  Icon(icon, size: 24.sp, color: AppColors.darkGrey),
+                  Gap(12.w),
+                  Text(
+                    text,
+                    style: AppTextStyles.body.copyWith(
+                      fontSize: ResponsiveUtils.fontSize(14),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
         ),
       ),
     );

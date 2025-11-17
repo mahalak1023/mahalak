@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+// removed: shared_preferences import (seeding removed)
 
 // Firebase options
 import 'firebase_options.dart';
@@ -12,6 +13,7 @@ import 'core/theme/app_theme.dart';
 
 // Services
 import 'Services/auth_service.dart';
+// removed: order_service import (seeding removed)
 
 // Auth
 import 'features/auth/presentation/pages/auth_entry_page.dart';
@@ -58,59 +60,13 @@ class MahallakApp extends StatefulWidget {
 }
 
 class _MahallakAppState extends State<MahallakApp> {
-  final AuthService _authService = AuthService();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-  bool _hasCheckedRedirect = false;
 
   @override
   void initState() {
     super.initState();
-    // Handle redirect result for web OAuth (Google/Apple sign-in)
-    if (kIsWeb) {
-      _handleRedirectResult();
-    }
-  }
-
-  Future<void> _handleRedirectResult() async {
-    if (_hasCheckedRedirect) return;
-    _hasCheckedRedirect = true;
-
-    try {
-      print('🔍 Checking for redirect result...');
-      final result = await _authService.getRedirectResult();
-
-      if (result != null && result.user != null) {
-        // User successfully signed in via redirect
-        print('✅ SUCCESS: Sign-in successful!');
-        print('User: ${result.user?.email}');
-        print('Display Name: ${result.user?.displayName}');
-        print('UID: ${result.user?.uid}');
-        print('Provider: ${result.credential?.providerId}');
-
-        // The StreamBuilder will automatically detect the auth state change
-        // and navigate to /home, so we don't need to manually navigate here
-        print('✅ Auth state will update automatically, redirecting to home...');
-      } else {
-        print('ℹ️ INFO: No redirect result found (normal page load)');
-      }
-    } catch (e, stackTrace) {
-      print('❌ ERROR: Failed to handle redirect result');
-      print('Error type: ${e.runtimeType}');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-
-      // If this is a Firebase auth error, it likely means:
-      // 1. Authorized domains not configured in Firebase Console
-      // 2. Redirect URIs not configured in Google Cloud Console
-      // 3. Or the OAuth client ID doesn't match
-      if (e.toString().contains('unauthorized') ||
-          e.toString().contains('domain') ||
-          e.toString().contains('origin')) {
-        print(
-          '⚠️ CONFIGURATION ERROR: Check Firebase authorized domains and Google Cloud redirect URIs',
-        );
-      }
-    }
+    // The redirect handling logic has been removed as we now use
+    // signInWithPopup on web, which doesn't require it.
   }
 
   @override
@@ -126,6 +82,8 @@ class _MahallakAppState extends State<MahallakApp> {
           builder: (context, snapshot) {
             // Check if we have auth state
             final isAuthenticated = snapshot.hasData && snapshot.data != null;
+
+            // seeding removed
 
             return MaterialApp(
               navigatorKey: _navigatorKey,
@@ -184,4 +142,6 @@ class _MahallakAppState extends State<MahallakApp> {
       },
     );
   }
+
+  // seed logic removed per user request
 }
