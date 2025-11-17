@@ -217,6 +217,112 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
     }
   }
 
+  // Show dialog to sign up / sign in with email & password
+  void _showEmailAuthDialog() {
+    final _emailController = TextEditingController();
+    final _passwordController = TextEditingController();
+    final _confirmController = TextEditingController();
+    final _formKeyEmail = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool _loading = false;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('التسجيل بواسطة البريد الإلكتروني'),
+              content: Form(
+                key: _formKeyEmail,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'البريد الإلكتروني',
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty)
+                          return 'الرجاء إدخال البريد الإلكتروني';
+                        if (!v.contains('@'))
+                          return 'البريد الإلكتروني غير صالح';
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'كلمة المرور',
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty)
+                          return 'الرجاء إدخال كلمة المرور';
+                        if (v.length < 6)
+                          return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: _confirmController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'تأكيد كلمة المرور',
+                      ),
+                      validator: (v) {
+                        if (v != _passwordController.text)
+                          return 'كلمتا المرور غير متطابقتين';
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('إلغاء'),
+                ),
+                ElevatedButton(
+                  onPressed: _loading
+                      ? null
+                      : () async {
+                          if (!_formKeyEmail.currentState!.validate()) return;
+                          setState(() => _loading = true);
+                          final email = _emailController.text.trim();
+                          final password = _passwordController.text.trim();
+                          final result = await _authService.createUserWithEmail(
+                            email: email,
+                            password: password,
+                          );
+                          setState(() => _loading = false);
+                          if (result != null && mounted) {
+                            Navigator.pop(context);
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/home',
+                              (route) => false,
+                            );
+                          } else {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text('حدث خطأ أثناء التسجيل'),
+                              ),
+                            );
+                          }
+                        },
+                  child: const Text('سجل'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -370,6 +476,40 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
           ],
         ).animate().fadeIn(delay: 1000.ms),
         Gap(20.h),
+        // Email/password signup button
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.h),
+          child: InkWell(
+            onTap: _showEmailAuthDialog,
+            borderRadius: BorderRadius.circular(12.r),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(
+                  color: AppColors.darkGrey.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.email, size: 24, color: Colors.black54),
+                  Gap(12.w),
+                  Text(
+                    'التسجيل بواسطة البريد الإلكتروني',
+                    style: AppTextStyles.body.copyWith(
+                      fontSize: ResponsiveUtils.fontSize(14),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ).animate().fadeIn(delay: 1000.ms),
+
         _buildSocialButton(
           icon: Icons.apple,
           text: 'تسجيل الدخول بواسطة Apple',

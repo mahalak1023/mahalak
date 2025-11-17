@@ -1,5 +1,5 @@
-
 import 'package:flutter/material.dart';
+import 'package:myapp/Services/cart_service.dart';
 
 class ProductListPage extends StatelessWidget {
   const ProductListPage({super.key});
@@ -9,9 +9,7 @@ class ProductListPage extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('منتجات المتجر'),
-        ),
+        appBar: AppBar(title: const Text('منتجات المتجر')),
         body: GridView.builder(
           padding: const EdgeInsets.all(10.0),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -22,6 +20,12 @@ class ProductListPage extends StatelessWidget {
           ),
           itemCount: 10,
           itemBuilder: (context, index) {
+            final cartService = CartService();
+            final productId = 'prod_${index + 1}';
+            final productName = 'منتج رقم ${index + 1}';
+            final productPrice = 10.0 + index; // example price
+            final productImage = 'https://picsum.photos/seed/$index/400/400';
+
             return GestureDetector(
               onTap: () {
                 Navigator.pushNamed(context, '/product-details');
@@ -32,12 +36,52 @@ class ProductListPage extends StatelessWidget {
                     Expanded(
                       child: Container(
                         color: Colors.grey[300],
-                        child: const Center(child: Icon(Icons.image, size: 50)),
+                        child: Image.network(
+                          productImage,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Text('منتج رقم ${index + 1}'),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text(productName)),
+                          IconButton(
+                            icon: const Icon(Icons.add_shopping_cart),
+                            onPressed: () async {
+                              try {
+                                await cartService.addOrIncrementItem(
+                                  productId: productId,
+                                  name: productName,
+                                  imageUrl: productImage,
+                                  price: productPrice,
+                                  quantity: 1,
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'تم إضافة المنتج إلى السلة',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('خطأ أثناء الإضافة: $e'),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

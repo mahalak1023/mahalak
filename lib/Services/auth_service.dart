@@ -58,7 +58,11 @@ class AuthService {
       print('❌ ERROR: Google sign-in failed');
       print('Error: $e');
       print('Stack trace: $stackTrace');
-      rethrow;
+      // On web this can surface as a JavaScript interop type error
+      // if a FirebaseException crosses the JS/Dart boundary. Return
+      // null instead of rethrowing so callers can handle the failure
+      // without propagating a raw FirebaseException into JS.
+      return null;
     }
   }
 
@@ -123,7 +127,9 @@ class AuthService {
       print('❌ ERROR: Apple sign-in failed');
       print('Error: $e');
       print('Stack trace: $stackTrace');
-      rethrow;
+      // Do not rethrow to avoid JS interop issues on web; return null
+      // so the UI can handle the error gracefully.
+      return null;
     }
   }
 
@@ -137,7 +143,9 @@ class AuthService {
       await Future.wait(futures);
     } catch (e) {
       print('Error signing out: $e');
-      rethrow;
+      // Don't rethrow to avoid surfacing framework-level JS interop
+      // issues when called from web UI callbacks.
+      return Future.value();
     }
   }
 
@@ -147,7 +155,52 @@ class AuthService {
       await _auth.currentUser?.delete();
     } catch (e) {
       print('Error deleting account: $e');
-      rethrow;
+      // Swallow the exception here and let caller decide next steps.
+      return Future.value();
+    }
+  }
+
+  // Create user with email & password
+  Future<UserCredential?> createUserWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Optionally send email verification
+      await userCredential.user?.sendEmailVerification();
+
+      print('✅ Email signup successful: ${userCredential.user?.email}');
+      return userCredential;
+    } catch (e, stackTrace) {
+      print('❌ ERROR: Email signup failed');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  // Sign in with email & password
+  Future<UserCredential?> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      print('✅ Email sign-in successful: ${userCredential.user?.email}');
+      return userCredential;
+    } catch (e, stackTrace) {
+      print('❌ ERROR: Email sign-in failed');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      return null;
     }
   }
 }

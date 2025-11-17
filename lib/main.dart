@@ -1,7 +1,11 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+// Firebase options
+import 'firebase_options.dart';
 
 // Theme
 import 'core/theme/app_theme.dart';
@@ -40,7 +44,9 @@ import 'features/orders/presentation/pages/order_details_page.dart';
 // Support
 import 'features/support/presentation/pages/help_center_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MahallakApp());
 }
 
@@ -66,8 +72,11 @@ class _MahallakAppState extends State<MahallakApp> {
   }
 
   Future<void> _handleRedirectResult() async {
+    if (_hasCheckedRedirect) return;
+    _hasCheckedRedirect = true;
+
     try {
-      print('Checking for redirect result...');
+      print('🔍 Checking for redirect result...');
       final result = await _authService.getRedirectResult();
 
       if (result != null && result.user != null) {
@@ -76,25 +85,31 @@ class _MahallakAppState extends State<MahallakApp> {
         print('User: ${result.user?.email}');
         print('Display Name: ${result.user?.displayName}');
         print('UID: ${result.user?.uid}');
+        print('Provider: ${result.credential?.providerId}');
 
-        _hasCheckedRedirect = true;
-        // Wait a bit for the StreamBuilder to rebuild, then navigate
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            '/home',
-            (route) => false,
-          );
-        }
+        // The StreamBuilder will automatically detect the auth state change
+        // and navigate to /home, so we don't need to manually navigate here
+        print('✅ Auth state will update automatically, redirecting to home...');
       } else {
         print('ℹ️ INFO: No redirect result found (normal page load)');
-        _hasCheckedRedirect = true;
       }
     } catch (e, stackTrace) {
       print('❌ ERROR: Failed to handle redirect result');
+      print('Error type: ${e.runtimeType}');
       print('Error: $e');
       print('Stack trace: $stackTrace');
-      _hasCheckedRedirect = true;
+
+      // If this is a Firebase auth error, it likely means:
+      // 1. Authorized domains not configured in Firebase Console
+      // 2. Redirect URIs not configured in Google Cloud Console
+      // 3. Or the OAuth client ID doesn't match
+      if (e.toString().contains('unauthorized') ||
+          e.toString().contains('domain') ||
+          e.toString().contains('origin')) {
+        print(
+          '⚠️ CONFIGURATION ERROR: Check Firebase authorized domains and Google Cloud redirect URIs',
+        );
+      }
     }
   }
 
@@ -128,14 +143,14 @@ class _MahallakAppState extends State<MahallakApp> {
                 );
               },
 
-          // أول شاشة
-          initialRoute: isAuthenticated ? '/home' : '/',
+              // أول شاشة
+              initialRoute: isAuthenticated ? '/home' : '/',
 
-          routes: {
-            // Auth
-            '/': (context) => const AuthEntryPage(),
-            '/otp': (context) => const OtpPage(),
-            '/forgot-password': (context) => const ForgotPasswordPage(),
+              routes: {
+                // Auth
+                '/': (context) => const AuthEntryPage(),
+                '/otp': (context) => const OtpPage(),
+                '/forgot-password': (context) => const ForgotPasswordPage(),
 
                 // Home & Stores
                 '/home': (context) => const HomePage(),
