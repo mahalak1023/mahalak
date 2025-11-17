@@ -7,19 +7,11 @@ class OrdersPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const bool hasOrders = true; // Set to false to see the empty state
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: const AppAppBar(title: 'طلباتي'),
-        body: hasOrders
-            ? const OrdersListView()
-            : const AppEmptyState(
-                title: 'لا توجد طلبات بعد',
-                description: 'لم تقم بأي طلبات حتى الآن. ابدأ التسوق الآن!',
-                lottieAssetPath: 'assets/lottie/no-orders.json',
-              ),
+        body: const OrdersListView(),
       ),
     );
   }

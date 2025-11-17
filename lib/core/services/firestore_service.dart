@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:myapp/features/home/data/models/store_model.dart';
 import 'package:myapp/features/product/data/models/product_model.dart';
@@ -11,8 +12,8 @@ class FirestoreService {
       return snapshot.docs
           .map((doc) => ProductModel.fromMap(doc.id, doc.data()))
           .toList();
-    } catch (e) {
-      print('Error getting products: $e');
+    } catch (e, s) {
+      developer.log('Error getting products', name: 'myapp.firestore', error: e, stackTrace: s);
       return [];
     }
   }
@@ -23,8 +24,8 @@ class FirestoreService {
       return snapshot.docs
           .map((doc) => StoreModel.fromMap(doc.id, doc.data()))
           .toList();
-    } catch (e) {
-      print('Error getting stores: $e');
+    } catch (e, s) {
+      developer.log('Error getting stores', name: 'myapp.firestore', error: e, stackTrace: s);
       return [];
     }
   }
@@ -36,11 +37,11 @@ class FirestoreService {
     // Check if data already exists
     final productsSnapshot = await productsCollection.limit(1).get();
     if (productsSnapshot.docs.isNotEmpty) {
-      print('Sample data already exists.');
+      developer.log('Sample data already exists.', name: 'myapp.firestore');
       return;
     }
 
-    print('Adding sample data to Firestore...');
+    developer.log('Adding sample data to Firestore...', name: 'myapp.firestore');
 
     final List<ProductModel> products = [
       ProductModel(
@@ -107,6 +108,6 @@ class FirestoreService {
       await storesCollection.add(store.toMap());
     }
 
-    print('Sample data added.');
+    developer.log('Sample data added.', name: 'myapp.firestore');
   }
 }
