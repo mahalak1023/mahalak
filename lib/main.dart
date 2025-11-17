@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Theme
 import 'core/theme/app_theme.dart';
+
+// Services
+import 'Services/auth_service.dart';
 
 // Auth
 import 'features/auth/presentation/pages/auth_entry_page.dart';
@@ -35,12 +43,85 @@ import 'features/orders/presentation/pages/order_details_page.dart';
 // Support
 import 'features/support/presentation/pages/help_center_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
+
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: FirebaseOptions(
+      apiKey: dotenv.env['API_KEY'] ?? '',
+      authDomain: dotenv.env['AUTH_DOMAIN'] ?? '',
+      projectId: dotenv.env['PROJECT_ID'] ?? '',
+      storageBucket: dotenv.env['STORAGE_BUCKET'] ?? '',
+      messagingSenderId: dotenv.env['MESSAGING_SENDER_ID'] ?? '',
+      appId: dotenv.env['APP_ID'] ?? '',
+      measurementId: dotenv.env['MEASUREMENT_ID'] ?? '',
+    ),
+  );
+
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL'] ?? '',
+    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+  );
+
   runApp(const MahallakApp());
 }
 
-class MahallakApp extends StatelessWidget {
+class MahallakApp extends StatefulWidget {
   const MahallakApp({super.key});
+
+  @override
+  State<MahallakApp> createState() => _MahallakAppState();
+}
+
+class _MahallakAppState extends State<MahallakApp> {
+  final AuthService _authService = AuthService();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  bool _hasCheckedRedirect = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Handle redirect result for web OAuth (Google/Apple sign-in)
+    if (kIsWeb) {
+      _handleRedirectResult();
+    }
+  }
+
+  Future<void> _handleRedirectResult() async {
+    try {
+      print('Checking for redirect result...');
+      final result = await _authService.getRedirectResult();
+
+      if (result != null && result.user != null) {
+        // User successfully signed in via redirect
+        print('✅ SUCCESS: Sign-in successful!');
+        print('User: ${result.user?.email}');
+        print('Display Name: ${result.user?.displayName}');
+        print('UID: ${result.user?.uid}');
+
+        _hasCheckedRedirect = true;
+        // Wait a bit for the StreamBuilder to rebuild, then navigate
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+            '/home',
+            (route) => false,
+          );
+        }
+      } else {
+        print('ℹ️ INFO: No redirect result found (normal page load)');
+        _hasCheckedRedirect = true;
+      }
+    } catch (e, stackTrace) {
+      print('❌ ERROR: Failed to handle redirect result');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      _hasCheckedRedirect = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,55 +131,64 @@ class MahallakApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return MaterialApp(
-          title: 'محلك',
-          debugShowCheckedModeBanner: false,
+        return StreamBuilder<User?>(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (context, snapshot) {
+            // Check if we have auth state
+            final isAuthenticated = snapshot.hasData && snapshot.data != null;
 
-          // نظام التصميم الرسمي
-          theme: AppTheme.lightTheme,
+            return MaterialApp(
+              navigatorKey: _navigatorKey,
+              title: 'محلك',
+              debugShowCheckedModeBanner: false,
 
-          // اتجاه RTL للتطبيق كله
-          builder: (context, widget) {
-            return Directionality(
-              textDirection: TextDirection.rtl,
-              child: widget ?? const SizedBox.shrink(),
+              // نظام التصميم الرسمي
+              theme: AppTheme.lightTheme,
+
+              // اتجاه RTL للتطبيق كله
+              builder: (context, widget) {
+                return Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: widget ?? const SizedBox.shrink(),
+                );
+              },
+
+              // Initial route based on auth state
+              initialRoute: isAuthenticated ? '/home' : '/',
+
+              routes: {
+                // Auth
+                '/': (context) => const AuthEntryPage(),
+                '/otp': (context) => const OtpPage(),
+                '/forgot-password': (context) => const ForgotPasswordPage(),
+
+                // Home & Stores
+                '/home': (context) => const HomePage(),
+                '/stores': (context) => const StoreListPage(),
+                '/products': (context) => const ProductListPage(),
+
+                // Product
+                '/product-details': (context) => const ProductDetailsPage(),
+
+                // Cart
+                '/cart': (context) => const CartPage(),
+
+                // Address
+                '/address-picker': (context) => const AddressPickerPage(),
+                '/add-address': (context) => const AddAddressPage(),
+
+                // Checkout + order status
+                '/checkout': (context) => const CheckoutPage(),
+                '/order-status': (context) => const OrderStatusPage(),
+
+                // Orders
+                '/orders': (context) => const OrdersHistoryPage(),
+                '/order-details': (context) => const OrderDetailsPage(),
+
+                // Support
+                '/help-center': (context) => const HelpCenterPage(),
+              },
             );
-          },
-
-          // أول شاشة
-          initialRoute: '/',
-
-          routes: {
-            // Auth
-            '/': (context) => const AuthEntryPage(),
-            '/otp': (context) => const OtpPage(),
-            '/forgot-password': (context) => const ForgotPasswordPage(),
-
-            // Home & Stores
-            '/home': (context) => const HomePage(),
-            '/stores': (context) => const StoreListPage(),
-            '/products': (context) => const ProductListPage(),
-
-            // Product
-            '/product-details': (context) => const ProductDetailsPage(),
-
-            // Cart
-            '/cart': (context) => const CartPage(),
-
-            // Address
-            '/address-picker': (context) => const AddressPickerPage(),
-            '/add-address': (context) => const AddAddressPage(),
-
-            // Checkout + order status
-            '/checkout': (context) => const CheckoutPage(),
-            '/order-status': (context) => const OrderStatusPage(),
-
-            // Orders
-            '/orders': (context) => const OrdersHistoryPage(),
-            '/order-details': (context) => const OrderDetailsPage(),
-
-            // Support
-            '/help-center': (context) => const HelpCenterPage(),
           },
         );
       },

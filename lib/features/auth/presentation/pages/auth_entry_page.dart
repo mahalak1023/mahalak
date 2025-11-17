@@ -1,14 +1,17 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gap/gap.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/utils/responsive_utils.dart';
+import '../../../../Services/auth_service.dart';
 
 class AuthEntryPage extends StatefulWidget {
   const AuthEntryPage({super.key});
@@ -20,7 +23,11 @@ class AuthEntryPage extends StatefulWidget {
 class _AuthEntryPageState extends State<AuthEntryPage> {
   final _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
+  String? _verificationId;
+  ConfirmationResult? _confirmationResult; // For web platform
 
   @override
   void dispose() {
@@ -32,22 +39,181 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
     if (value == null || value.isEmpty) {
       return 'الرجاء إدخال رقم الهاتف';
     }
-    if (value.length < 10) {
+    // Egyptian phone numbers: 10 or 11 digits (01xxxxxxxxx)
+    if (value.length < 10 || value.length > 11) {
       return 'رقم الهاتف غير صحيح';
+    }
+    // Must start with 01
+    if (!value.startsWith('01')) {
+      return 'يجب أن يبدأ رقم الهاتف بـ 01';
     }
     return null;
   }
 
-  void _handleContinue() {
+  void _handleContinue() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      // Simulate API call
-      Future.delayed(const Duration(seconds: 1), () {
+
+      try {
+        // Format Egyptian phone number to E.164 format (+20xxxxxxxxxx)
+        String phoneNumber = _phoneController.text.trim();
+        // Remove leading 0 if exists and add +20
+        if (phoneNumber.startsWith('0')) {
+          phoneNumber = phoneNumber.substring(1);
+        }
+        phoneNumber = '+20$phoneNumber';
+
+        if (kIsWeb) {
+          // Web platform: Use signInWithPhoneNumber with reCAPTCHA
+          _confirmationResult = await _auth.signInWithPhoneNumber(
+            phoneNumber,
+            // RecaptchaVerifier is automatically handled by Firebase on web
+          );
+
+          if (mounted) {
+            setState(() => _isLoading = false);
+            // Navigate to OTP page with confirmation result
+            Navigator.pushNamed(
+              context,
+              '/otp',
+              arguments: {
+                'confirmationResult': _confirmationResult,
+                'phoneNumber': phoneNumber,
+                'isWeb': true,
+              },
+            );
+          }
+        } else {
+          // Mobile platforms: Use verifyPhoneNumber
+          await _auth.verifyPhoneNumber(
+            phoneNumber: phoneNumber,
+            verificationCompleted: (PhoneAuthCredential credential) async {
+              // Auto-verification (Android only)
+              await _auth.signInWithCredential(credential);
+              if (mounted) {
+                setState(() => _isLoading = false);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/home',
+                  (route) => false,
+                );
+              }
+            },
+            verificationFailed: (FirebaseAuthException e) {
+              if (mounted) {
+                setState(() => _isLoading = false);
+                String errorMessage = 'حدث خطأ في إرسال الرمز';
+
+                if (e.code == 'invalid-phone-number') {
+                  errorMessage = 'رقم الهاتف غير صحيح';
+                } else if (e.code == 'too-many-requests') {
+                  errorMessage = 'تم تجاوز عدد المحاولات. حاول لاحقاً';
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(errorMessage),
+                    backgroundColor: AppColors.errorRed,
+                  ),
+                );
+              }
+            },
+            codeSent: (String verificationId, int? resendToken) {
+              if (mounted) {
+                setState(() {
+                  _isLoading = false;
+                  _verificationId = verificationId;
+                });
+
+                // Navigate to OTP page with verification ID and phone number
+                Navigator.pushNamed(
+                  context,
+                  '/otp',
+                  arguments: {
+                    'verificationId': verificationId,
+                    'phoneNumber': phoneNumber,
+                    'isWeb': false,
+                  },
+                );
+              }
+            },
+            codeAutoRetrievalTimeout: (String verificationId) {
+              _verificationId = verificationId;
+            },
+            timeout: const Duration(seconds: 60),
+          );
+        }
+      } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);
-          Navigator.pushNamed(context, '/otp');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('حدث خطأ: ${e.toString()}'),
+              backgroundColor: AppColors.errorRed,
+            ),
+          );
         }
-      });
+      }
+    }
+  }
+
+  void _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userCredential = await _authService.signInWithGoogle();
+
+      if (userCredential != null && mounted) {
+        setState(() => _isLoading = false);
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      } else {
+        // User canceled sign-in
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'حدث خطأ في تسجيل الدخول بواسطة Google: ${e.toString()}',
+            ),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleAppleSignIn() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userCredential = await _authService.signInWithApple();
+
+      if (userCredential != null && mounted) {
+        setState(() => _isLoading = false);
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      } else {
+        // User canceled sign-in
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'حدث خطأ في تسجيل الدخول بواسطة Apple: ${e.toString()}',
+            ),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
     }
   }
 
@@ -115,18 +281,18 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
             size: 40.sp,
             color: AppColors.primaryBlue,
           ),
-        )
-            .animate()
-            .scale(duration: 600.ms, curve: Curves.easeOutBack)
-            .fadeIn(),
+        ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack).fadeIn(),
         Gap(24.h),
         Text(
-          'مرحباً بك في محلك',
-          style: AppTextStyles.headlineLarge.copyWith(
-            fontSize: ResponsiveUtils.fontSize(28),
-          ),
-          textAlign: TextAlign.center,
-        ).animate().fadeIn(delay: 200.ms).slideY(
+              'مرحباً بك في محلك',
+              style: AppTextStyles.headlineLarge.copyWith(
+                fontSize: ResponsiveUtils.fontSize(28),
+              ),
+              textAlign: TextAlign.center,
+            )
+            .animate()
+            .fadeIn(delay: 200.ms)
+            .slideY(
               begin: 0.3,
               end: 0,
               duration: 400.ms,
@@ -151,33 +317,33 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           CustomTextField(
-            controller: _phoneController,
-            label: 'رقم الهاتف',
-            hint: '05xxxxxxxx',
-            keyboardType: TextInputType.phone,
-            prefixIcon: Icon(
-              Icons.phone_outlined,
-              size: 20.sp,
-              color: AppColors.accentTeal,
-            ),
-            validator: _validatePhone,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(10),
-            ],
-            textInputAction: TextInputAction.done,
-          )
+                controller: _phoneController,
+                label: 'رقم الهاتف',
+                hint: '01xxxxxxxxx',
+                keyboardType: TextInputType.phone,
+                prefixIcon: Icon(
+                  Icons.phone_outlined,
+                  size: 20.sp,
+                  color: AppColors.accentTeal,
+                ),
+                validator: _validatePhone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(11),
+                ],
+                textInputAction: TextInputAction.done,
+              )
               .animate()
               .fadeIn(delay: 600.ms)
               .slideX(begin: -0.2, end: 0, duration: 400.ms),
           Gap(24.h),
           CustomButton(
-            text: 'متابعة',
-            onPressed: _handleContinue,
-            isLoading: _isLoading,
-            icon: Icons.arrow_back_ios,
-            height: ResponsiveUtils.height(54),
-          )
+                text: 'متابعة',
+                onPressed: _handleContinue,
+                isLoading: _isLoading,
+                icon: Icons.arrow_back_ios,
+                height: ResponsiveUtils.height(54),
+              )
               .animate()
               .fadeIn(delay: 800.ms)
               .slideY(begin: 0.2, end: 0, duration: 400.ms),
@@ -192,35 +358,28 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
         Row(
           children: [
             Expanded(
-                child: Divider(
-                    color: AppColors.darkGrey.withValues(alpha: 0.2))),
+              child: Divider(color: AppColors.darkGrey.withValues(alpha: 0.2)),
+            ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Text(
-                'أو',
-                style: AppTextStyles.caption,
-              ),
+              child: Text('أو', style: AppTextStyles.caption),
             ),
             Expanded(
-                child: Divider(
-                    color: AppColors.darkGrey.withValues(alpha: 0.2))),
+              child: Divider(color: AppColors.darkGrey.withValues(alpha: 0.2)),
+            ),
           ],
         ).animate().fadeIn(delay: 1000.ms),
         Gap(20.h),
         _buildSocialButton(
           icon: Icons.apple,
           text: 'تسجيل الدخول بواسطة Apple',
-          onTap: () {
-            // TODO: Implement Apple sign in
-          },
+          onTap: _handleAppleSignIn,
         ).animate().fadeIn(delay: 1100.ms).slideX(begin: -0.1, end: 0),
         Gap(12.h),
         _buildSocialButton(
           icon: Icons.g_mobiledata,
           text: 'تسجيل الدخول بواسطة Google',
-          onTap: () {
-            // TODO: Implement Google sign in
-          },
+          onTap: _handleGoogleSignIn,
         ).animate().fadeIn(delay: 1200.ms).slideX(begin: 0.1, end: 0),
         Gap(32.h),
         Text(
@@ -243,10 +402,7 @@ class _AuthEntryPageState extends State<AuthEntryPage> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: 16.w,
-          vertical: 14.h,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12.r),
